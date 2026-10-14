@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from datasets import load_dataset
 
-from config import DATA_URL, SEED
+from .config import DATA_URL, SEED
 
 
 @dataclass
@@ -95,3 +95,4 @@ def load_corpus():
         "heldout": [parse_paper(by_id[i]) for i in held_ids],
     }
     return corpus, answer_qids
+

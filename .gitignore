@@ -1,13 +1,20 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Runtime output dirs (generated at startup by config.py)
+cache/
+results/
+analysis/
+data/
 
-# Virtual environments
-.venv
+# Python bytecode
+**/__pycache__/
+*.pyc
+*.pyo
 
-# Env 
+# Virtual environment
+.venv/
+
+# Env secrets
 .env
+
+# Editor
+.vscode/
+.idea/

@@ -15,9 +15,22 @@ def tokenize(text):
 
 
 class BM25:
+    """In-memory BM25 Okapi retriever built from scratch.
+
+    Parameters
+    ----------
+    texts : Iterable[str]
+        Corpus documents to index.
+    k1 : float, default=1.5
+        Term frequency saturation parameter.
+    b : float, default=0.75
+        Document length normalization parameter (0 = no length penalty, 1 = full penalty).
+    """
+
     def __init__(self, texts, k1=1.5, b=0.75):
         self.k1, self.b, self.N = k1, b, len(texts)
-        self.postings = defaultdict(list)                  # term -> [(doc, term frequency)]
+        # Inverted index mapping: term -> list of (doc_index, term_frequency)
+        self.postings = defaultdict(list)
         self.doc_len = np.zeros(self.N)
         for i, text in enumerate(texts):
             tokens = tokenize(text)
@@ -25,7 +38,8 @@ class BM25:
             for term, tf in Counter(tokens).items():
                 self.postings[term].append((i, tf))
         self.avgdl = float(self.doc_len.mean()) if self.N else 1.0
-        # Lucene-style IDF: never negative, even for terms in most documents
+        # Lucene-style smoothed IDF: log(1 + (N - df + 0.5) / (df + 0.5))
+        # Ensures non-negative weights for high-frequency terms appearing across most documents.
         self.idf = {t: math.log(1 + (self.N - len(p) + 0.5) / (len(p) + 0.5)) for t, p in self.postings.items()}
 
     def scores(self, query):
@@ -40,3 +54,4 @@ class BM25:
         s = self.scores(query)
         order = np.lexsort((np.arange(self.N), -s))[:top_k]       # ties -> lower index first
         return [(int(i), float(s[i])) for i in order if s[i] > 0]
+

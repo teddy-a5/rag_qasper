@@ -51,6 +51,7 @@ def chunk_corpus(papers, **kwargs):
     return [ch for paper in papers for ch in fixed_chunks(paper, **kwargs)]
 
 
+
 """
 Paragraph-aligned chunker (for ingestion) and contextual headings (for retrieval).
 """
@@ -123,7 +124,7 @@ def add_headers(paper, chunks):
 
 
 def chunk_paper(paper, cfg):
-    """hunker switch + optional contextual headers."""
+    """Chunker switch + optional contextual headers."""
     if cfg["chunker"] == "fixed":
         chunks = fixed_chunks(paper, size=cfg["size"], overlap=cfg["overlap"])
     elif cfg["chunker"] == "paragraph":
@@ -131,3 +132,4 @@ def chunk_paper(paper, cfg):
     else:
         raise ValueError(f"unknown chunker {cfg['chunker']}")
     return add_headers(paper, chunks) if cfg.get("headers") else chunks
+

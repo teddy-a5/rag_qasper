@@ -2,7 +2,7 @@
 from pathlib import Path
 
 SEED = 42
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parents[2]  # rag_qasper/ (repo root)
 CACHE_DIR = ROOT / "cache"
 RESULTS_DIR = ROOT / "results"
 CACHE_DIR.mkdir(exist_ok=True)
@@ -14,18 +14,17 @@ DATA_URL = (
 )
 
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
-# BGE v1.5: prefix queries (never documents) with this instruction. Keep it fixed across configs.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
-TOP_K = 10            # chunks returned per question
-MAX_CHARS = 12_000    # combined text limit for the 10 chunks
+TOP_K = 10            
+MAX_CHARS = 12_000   
 COVERAGE_THRESHOLD = 0.8
-GEN_MODEL = "gemini-3.5-flash-lite"  # temperature 0, 20 held-out questions only
+GEN_MODEL = "gemini-3.5-flash-lite"  
 
-ANALYSIS_DIR = ROOT / "analysis"   # per-question scores for failure analysis (not part of results/)
+ANALYSIS_DIR = ROOT / "analysis"   
 ANALYSIS_DIR.mkdir(exist_ok=True)
 
-# One dict of switches per experiment. Add "A", "B", "C", "final" here later.
+
 CONFIGS = {
     "baseline": {"chunker": "fixed", "size": 800, "overlap": 200, "retriever": "dense"},
     # A: paragraph-aligned chunks (ingestion)
@@ -39,3 +38,4 @@ CONFIGS = {
     # extra ablation row: A + C without headers
     "final_nohdr": {"chunker": "paragraph", "max_chars": 1100, "retriever": "hybrid"},
 }
+
