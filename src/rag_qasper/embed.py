@@ -17,14 +17,13 @@ def _digest(parts):
 
 
 class Embedder:
-    """Documents are embedded as-is. Queries get QUERY_PREFIX (BGE v1.5 retrieval instruction).
-    Vectors are L2-normalized float32, so a dot product equals cosine similarity."""
+    """Document and query embedder with disk caching and L2 normalization."""
 
     def __init__(self, model_name=EMBED_MODEL, device="cpu", cache_dir=CACHE_DIR, use_query_cache=True):
         self.model_name = model_name
         self.device = device
         self.cache_dir = cache_dir
-        self.use_query_cache = use_query_cache   # False -> every query is embedded fresh (honest latency)
+        self.use_query_cache = use_query_cache
         self.cache_dir.mkdir(exist_ok=True)
         self._model = None
         safe = re.sub(r"[^A-Za-z0-9_.-]", "_", model_name)
@@ -34,7 +33,7 @@ class Embedder:
 
     @property
     def model(self):
-        if self._model is None:                      # lazy: import/load only when needed
+        if self._model is None:                    
             from sentence_transformers import SentenceTransformer
             self._model = SentenceTransformer(self.model_name, device=self.device)
         return self._model

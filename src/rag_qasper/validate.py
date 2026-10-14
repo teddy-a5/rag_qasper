@@ -1,5 +1,8 @@
-"""Checks a results JSONL file against the brief's format rules.
-Usage: python -m rag_qasper.validate --split dev --file results/dev_baseline.jsonl [--require-answers]"""
+"""Schema and consistency validation for experiment output files (JSONL).
+
+Usage:
+    python -m rag_qasper.validate --split dev --file results/dev_baseline.jsonl [--require-answers]
+"""
 import argparse
 import json
 import re
@@ -79,6 +82,11 @@ def validate_records(records, papers, split, answer_qids=frozenset(), require_an
 def read_jsonl(path):
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
+
+
+def write_jsonl(path, records):
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
 
 
 if __name__ == "__main__":

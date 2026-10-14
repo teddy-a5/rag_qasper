@@ -1,15 +1,10 @@
-"""Retrieval metrics: span coverage, Recall@k, MRR@10.
+"""Retrieval evaluation metrics: span coverage, Recall@k, and MRR@10.
 
-Interpretation (state this in the README):
-- A gold paragraph is "found" when >= COVERAGE_THRESHOLD of its whitespace tokens are covered
-  by the source_spans of the retrieved chunks. A token is covered only if it lies fully inside
-  the union of spans for that paragraph.
-- combine="union": spans from all top-k chunks (of the target paper) are merged.
-  combine="single": one chunk alone must reach the threshold (stricter; use for a sensitivity check).
-- Only chunks whose paper_id == target paper count. Wrong-paper chunks never help.
-- Recall@k = found gold paragraphs / gold paragraphs.
-- MRR@10 = 1/r for the smallest r such that the top-r chunks find at least one gold paragraph, else 0.
-- Questions with no gold paragraph return None and are excluded from the averages.
+Metric definitions:
+- Span Coverage: Fraction of gold paragraph whitespace tokens encompassed by retrieved source spans.
+- Paragraph Retrieval: A gold paragraph is hit when coverage >= COVERAGE_THRESHOLD.
+- Recall@k: Proportion of gold paragraphs retrieved within the top-k results.
+- MRR@10: Reciprocal rank of the first top-k chunk that successfully retrieves a gold paragraph.
 """
 import re
 from collections import defaultdict

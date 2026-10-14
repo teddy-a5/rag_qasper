@@ -1,6 +1,8 @@
-"""Run one configuration on one split.
+"""
+Run one configuration on one split.
 Usage: python scripts/run.py --split dev --config baseline
-Writes results/{split}_{config}.jsonl and analysis/{split}_{config}_scores.json."""
+Writes results/{split}_{config}.jsonl and analysis/{split}_{config}_scores.json.
+"""
 import argparse
 import json
 import statistics
@@ -10,6 +12,7 @@ from dotenv import load_dotenv
 
 from rag_qasper.chunking import chunk_paper
 from rag_qasper.config import ANALYSIS_DIR, CONFIGS, MAX_CHARS, RESULTS_DIR, TOP_K
+from rag_qasper.data import load_corpus
 from rag_qasper.embed import Embedder
 from rag_qasper.metrics import mean_ignoring_none, mrr_at_k, recall_at_k
 from rag_qasper.retriever.dense import DenseRetriever
@@ -32,7 +35,7 @@ def build_retriever(chunks, cfg, embedder):
 
 
 def format_retrieved(chunks, hits):
-    """Exactly TOP_K unique chunks, ranked from 1, in the output format."""
+    """Format and deduplicate the top-k retrieved chunks, validating character limits."""
     out, seen = [], set()
     for idx, score in hits:
         ch = chunks[idx]
@@ -49,7 +52,7 @@ def format_retrieved(chunks, hits):
 
 
 def run_split(papers, cfg, embedder):
-    """Search ALL papers of the split for every question (no filtering by target paper)."""
+    """Evaluate retrieval across all papers in the split for each question."""
     chunks = build_chunks(papers, cfg)
     retriever = build_retriever(chunks, cfg, embedder)
     para_text = {p.paper_id: {x.pid: x.text for x in p.paragraphs} for p in papers}
@@ -57,7 +60,7 @@ def run_split(papers, cfg, embedder):
     for paper in papers:
         for q in paper.questions:
             t0 = time.perf_counter()
-            hits = retriever.search(q.text, top_k=TOP_K)       # includes query embedding time
+            hits = retriever.search(q.text, top_k=TOP_K)  # includes query embedding time
             retrieved = format_retrieved(chunks, hits)
             latency_ms = (time.perf_counter() - t0) * 1000
             records.append({"question_id": q.qid, "target_paper_id": paper.paper_id,
@@ -97,7 +100,6 @@ def main():
                     help="embed every query fresh (no query cache) so latency includes embedding")
     a = ap.parse_args()
 
-    from rag_qasper.data import load_corpus
     corpus, answer_qids = load_corpus()
     papers = corpus[a.split]
     embedder = Embedder(use_query_cache=not a.cold_queries)

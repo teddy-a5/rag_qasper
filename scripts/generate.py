@@ -1,8 +1,12 @@
-"""Answer the 20 selected held-out questions with Gemini (temperature 0), then score them.
-Usage:  set GEMINI_API_KEY, then  python scripts/generate.py --config baseline
-        and   python scripts/generate.py --config final
-Reads and rewrites results/heldout_{config}.jsonl. Only the 20 ANSWER_QIDS get an answer; all other
-records keep answer/abstained = null. Responses are cached on disk (re-runs cost nothing)."""
+"""Answer held-out questions using Gemini (temperature 0) and evaluate answer quality.
+
+Usage:
+    python scripts/generate.py --config baseline
+    python scripts/generate.py --config final
+
+Reads and updates results/heldout_{config}.jsonl in place. Evaluates only the selected
+questions; unselected entries retain null values. Responses are cached locally.
+"""
 import argparse
 import hashlib
 import json
@@ -12,9 +16,14 @@ import string
 import time
 from collections import Counter
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from rag_qasper.config import ANALYSIS_DIR, CACHE_DIR, GEN_MODEL, RESULTS_DIR
 
-PROMPT = """You answer a question about a scientific paper using ONLY the excerpts below.
+PROMPT = """
+You answer a question about a scientific paper using ONLY the excerpts below.
 Rules:
 - Answer concisely: a short phrase or one sentence.
 - For yes/no questions answer only "Yes" or "No".
@@ -24,18 +33,20 @@ Excerpts:
 {excerpts}
 
 Question: {question}
-Answer:"""
+Answer:
+"""
 
 _CACHE = CACHE_DIR / "gen_cache.json"
 
 
 def build_prompt(question, retrieved):
-    excerpts = "\n\n".join(f"[{c['rank']}] {c['text']}" for c in retrieved)   # rank order, same for every system
+    # Pass chunks formatted by rank order
+    excerpts = "\n\n".join(f"[{c['rank']}] {c['text']}" for c in retrieved)
     return PROMPT.format(excerpts=excerpts, question=question)
 
 
 def parse_response(text):
-    """-> (answer, abstained). Deliberate refusal is answer='' and abstained=True."""
+    """Parse model output into (answer, abstained)."""
     t = (text or "").strip()
     if not t or re.fullmatch(r"unanswerable\W*", t, flags=re.IGNORECASE):
         return "", True
@@ -43,11 +54,12 @@ def parse_response(text):
 
 
 def call_gemini(prompt, retries=3):
-    """-> (text, latency_ms). Disk-cached; a cache hit reuses the original latency."""
+    """Invoke Gemini with disk caching and retry logic, returning (text, latency_ms)."""
     cache = json.loads(_CACHE.read_text(encoding="utf-8")) if _CACHE.exists() else {}
     key = hashlib.sha256((GEN_MODEL + "\x00" + prompt).encode()).hexdigest()
     if key in cache:
         return cache[key]["text"], cache[key]["latency_ms"]
+    
     from google import genai
     from google.genai import types
     client = genai.Client()                              
@@ -66,8 +78,8 @@ def call_gemini(prompt, retries=3):
             time.sleep(2 ** (attempt + 1))
 
 
-"""scoring"""
 def normalize(s):
+    """Lower, remove punctuation, and strip articles."""
     s = s.lower()
     s = "".join(ch for ch in s if ch not in set(string.punctuation))
     s = re.sub(r"\b(a|an|the)\b", " ", s)
@@ -75,6 +87,7 @@ def normalize(s):
 
 
 def f1(pred, gold):
+    """Compute token-level F1 score between prediction and gold reference."""
     p, g = normalize(pred).split(), normalize(gold).split()
     if not p or not g:
         return float(p == g)
@@ -86,7 +99,7 @@ def f1(pred, gold):
 
 
 def gold_answers(question):
-    """Answer strings of annotators who did not mark the question unanswerable."""
+    """Extract gold answer strings from answerable annotators."""
     out = []
     for a in question.raw_answers:
         if a["unanswerable"]:
@@ -101,27 +114,28 @@ def gold_answers(question):
 
 
 def score_answer(question, answer, abstained):
-    """Gold unanswerable: 1 if the system abstained, else 0.  Answerable: best F1 over annotators, 0 if abstained."""
+    """Score prediction: accuracy for unanswerable questions, max F1 across annotators otherwise."""
     if question.unanswerable or not gold_answers(question):
         return 1.0 if abstained else 0.0
     return 0.0 if abstained else max(f1(answer, g) for g in gold_answers(question))
 
 
 def generate_for_records(records, questions, answer_qids, call=call_gemini):
-    """Fill answer/abstained/latency/llm_calls for the selected questions only. Skips ones already answered."""
+    """Generate answers for designated questions, skipping already completed ones."""
     done = 0
     for r in records:
         if r["question_id"] not in answer_qids or r["answer"] is not None:
             continue
         text, gen_ms = call(build_prompt(questions[r["question_id"]].text, r["retrieved"]))
         r["answer"], r["abstained"] = parse_response(text)
-        r["latency_ms"] = round(r["latency_ms"] + gen_ms, 2)       # retrieval + generation
+        r["latency_ms"] = round(r["latency_ms"] + gen_ms, 2)  # retrieval + generation time
         r["llm_calls"] += 1
         done += 1
     return done
 
 
 def summarize(records, questions, answer_qids):
+    """Aggregate evaluation metrics over evaluated and retrieval-only subsets."""
     sel = [r for r in records if r["question_id"] in answer_qids]
     rest = [r for r in records if r["question_id"] not in answer_qids]
     scores = [score_answer(questions[r["question_id"]], r["answer"], r["abstained"]) for r in sel]
@@ -142,9 +156,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     a = ap.parse_args()
-    from rag_qasper.data import load_corpus
-    from scripts.run import write_jsonl
+
+    from run import write_jsonl
+
+    from data import load_corpus
     from rag_qasper.validate import read_jsonl, validate_records
+
     corpus, answer_qids = load_corpus()
     questions = {q.qid: q for p in corpus["heldout"] for q in p.questions}
     path = RESULTS_DIR / f"heldout_{a.config}.jsonl"
