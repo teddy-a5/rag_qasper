@@ -87,7 +87,7 @@ def parse_paper(rec) -> Paper:
 
 
 def load_corpus():
-    ds = load_dataset("parquet", DATA_URL, split="validation")
+    ds = load_dataset("parquet", data_files={"validation": DATA_URL}, split="validation")
     build_ids, held_ids, answer_qids = make_splits(ds)
     by_id = {r["id"]: r for r in ds}
     corpus = {
