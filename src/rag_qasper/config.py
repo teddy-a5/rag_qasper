@@ -23,6 +23,7 @@ QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 TOP_K = 10            
 MAX_CHARS = 12_000   
 COVERAGE_THRESHOLD = 0.8
+GEN_MODEL = "gemini-3.5-flash-lite"
 
 ANALYSIS_DIR = ROOT / "analysis"   
 ANALYSIS_DIR.mkdir(exist_ok=True)

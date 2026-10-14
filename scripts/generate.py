@@ -159,7 +159,7 @@ def main():
 
     from run import write_jsonl
 
-    from data import load_corpus
+    from rag_qasper.data import load_corpus
     from rag_qasper.validate import read_jsonl, validate_records
 
     corpus, answer_qids = load_corpus()

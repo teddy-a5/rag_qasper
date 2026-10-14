@@ -16,11 +16,11 @@ takes about 6 to 9 minutes on a CPU the first time per chunking setup; later run
 ## Running
 
 ```bash
-uv run python scripts/run.py --split dev     --config baseline --cold-queries   # also: A, B, C, final, final_nohdr
-uv run python scripts/run.py --split heldout --config baseline --cold-queries
-uv run python scripts/run.py --split heldout --config final    --cold-queries
-uv run python scripts/generate.py --config baseline
-uv run python scripts/generate.py --config final
+uv run scripts/run.py --split dev     --config baseline --cold-queries   # also: A, B, C, final, final_nohdr
+uv run scripts/run.py --split heldout --config baseline --cold-queries
+uv run scripts/run.py --split heldout --config final    --cold-queries
+uv run scripts/generate.py --config baseline
+uv run scripts/generate.py --config final
 ```
 
 `--cold-queries` embeds each query fresh so the reported latency includes query embedding.
