@@ -82,19 +82,6 @@ C +0.051 [+0.018, +0.084]; final +0.113 [+0.065, +0.162]. The final configuratio
 The sample contains **one** gold-unanswerable question, so the false-answer rate is exploratory only.
 The other 162 questions are retrieval-only (latency in the table above). The generation prompt was not tuned on held-out results.
 
-## Failure analysis (development, baseline)
-
-Baseline categories on dev (261 scored questions): fully found 31 (11.9%); no chunk from the target paper in the top 10: 107 (41.0%);
-gold paragraph touched but under 80% covered: 30 (11.5%); right paper but wrong chunks: 61 (23.4%); only some gold paragraphs found: 32 (12.3%).
-Average redundant chunks per top 10: 0.08, so deduplication / MMR was not chosen. Of the 230 failures, the first chunk touching the gold paragraph
-sat at ranks 11 to 50 for 112, at 51 to 100 for 21, and beyond 100 for 97. Full case analysis: `notebooks/failure_analysis.ipynb`.
-
-TODO: 10+ rows in your own words.
-
-| Question ID | Observed problem | Likely cause | Proposed fix |
-|---|---|---|---|
-| | | | |
-
 ## Reflection (draft: rewrite in your own words)
 
 - **What worked.** Paragraph chunks (A) fixed boundary splits. Hybrid retrieval (C) raised recall@10 but not the top ranks.
